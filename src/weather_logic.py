@@ -12,6 +12,7 @@
 # author:     gorkon
 # soft ver:   V0.0.1
 # change log: 创建程序
+# V0.0.2 添加用户输入城市名称选项
 
 
 from weather_ui import Ui_Class
@@ -24,6 +25,9 @@ import requests
 #需要获取天气的城市，拼音
 CITY_NAME = "beijing"
 MY_WEATHER_KEY = "80aa4504b70a4de4bf27bf4c521dc362"
+URL_HEAD_NOW = "https://free-api.heweather.net/s6/weather/now?location="
+URL_HEAD_FORECAST = "https://free-api.heweather.net/s6/weather/forecast?location="
+URL_TAIL = "&key="+MY_WEATHER_KEY
 
 #获取天气信息线程
 class Update_Thread(QThread):
@@ -35,10 +39,15 @@ class Update_Thread(QThread):
     def __init__(self):
         super().__init__()
         self.working = True
-        self.url_now="https://free-api.heweather.net/s6/weather/now?location="+CITY_NAME+"&key="+MY_WEATHER_KEY
-        self.url="https://free-api.heweather.net/s6/weather/forecast?location="+CITY_NAME+"&key="+MY_WEATHER_KEY
+        self.url_now=""
+        self.url_forecast=""
         self.bad_wea=["小雨","中雨","大雨","阵雨","雷阵雨","暴雨","大暴雨","特大暴雨","小到中雨","中到大雨","大到暴雨","暴雨到大暴雨","雨"]
     
+    #设置城市名称
+    def set_city_name(self, name_str):
+        self.url_now = URL_HEAD_NOW + name_str + URL_TAIL
+        self.url_forecast = URL_HEAD_FORECAST + name_str + URL_TAIL
+        
     #判断 获取的天气信息是否有雨
     # todo 实现太笨，待优化
     def __is_bad_weather(self, wae_str):
@@ -68,7 +77,7 @@ class Update_Thread(QThread):
                     self.wt_up_now_sig.emit(city_name, weat_info, time_info, 0)
                 
                 #获取天气信息，和风天气使用关键字 forecast
-                rs_we = requests.get(self.url).json()
+                rs_we = requests.get(self.url_forecast).json()
                 #获取返回数据中的 明天 的天气信息
                 time_info = rs_we["HeWeather6"][0]["daily_forecast"][1]["date"]
                 wea_info_str = rs_we["HeWeather6"][0]["daily_forecast"][1]["cond_txt_d"]
@@ -135,13 +144,23 @@ class Weather_Class(QObject):
                 self.ui.set_otr_weathercolor(2, "blue")
             self.ui.update_2_weather(str_wea)
             
+    #确定按钮的槽函数
+    def get_set_city_name(self):
+        self.city_name_str = self.ui.set_city_line.text()
+        self.up_thread.set_city_name(self.city_name_str)
+        self.ui.set_city_line.setDisabled(True)
+        self.ui.set_city_btn.setDisabled(True)
+        self.up_thread.start()
+
+        
         
     #将自定义信号和槽函数关联，并启动获取天气信息的线程
     def update_wea_ui(self):
+        self.ui.set_city_btn.clicked.connect(self.get_set_city_name)
         self.up_thread.wt_up_now_sig.connect(self.up_now_wea)
         self.up_thread.wt_up_oth_sig.connect(self.up_otr_wea)
-        self.up_thread.start()
-        
+
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
