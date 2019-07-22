@@ -13,6 +13,7 @@
 # soft ver:   V0.0.1
 # change log: 创建程序
 # V0.0.2 添加用户输入城市名称选项
+# V0.0.3 天气API使用auto_ip选项
 
 
 import sys
@@ -34,15 +35,13 @@ class Ui_Class(QWidget):
         self.weat_line = QLineEdit(self)
         self.weat_line_1 = QLineEdit(self)
         self.weat_line_2 = QLineEdit(self)
-        self.set_city_line = QLineEdit("beijing", self)
-        self.set_city_btn = QPushButton("确定", self)
         self.init_ui()
         
     def init_ui(self):
         ui_font = QFont("宋体",12)
         self.setFont(ui_font)
         self.resize(480,320)
-        self.setWindowTitle("天气")
+        self.setWindowTitle("简易天气")
         
         #将窗体部署到屏幕中间
         screen_size = QDesktopWidget().screenGeometry()
@@ -56,27 +55,19 @@ class Ui_Class(QWidget):
         self.weat_line_1.setDisabled(True)
         self.weat_line_2.setDisabled(True)
         
-        #控件布局
-        # 两个无效label
-        label_1 = QLabel("                ",self)
-        label_2 = QLabel("                ",self)
+        #控件布局        
         grid = QGridLayout()
         grid.setSpacing(2)
-        grid.addWidget(self.set_city_line, 1, 0)
-        grid.addWidget(self.set_city_btn, 1, 1)
-        self.set_city_btn.setDefault(True)
-        grid.addWidget(label_1, 1, 2)
-        grid.addWidget(label_2, 1, 3)
-        grid.addWidget(self.city, 2, 0, 1, 1)
-        grid.addWidget(self.city_line, 2, 1, 1, 3)
-        grid.addWidget(self.time, 3, 0, 1, 1)
-        grid.addWidget(self.time_line, 3, 1, 1, 3)
-        grid.addWidget(self.weath, 4, 0, 1, 1)
-        grid.addWidget(self.weat_line, 4, 1, 1, 3)
-        grid.addWidget(self.weath_1, 5, 0, 1, 1)
-        grid.addWidget(self.weat_line_1, 5, 1, 1, 3)
-        grid.addWidget(self.weath_2, 6, 0, 1, 1)
-        grid.addWidget(self.weat_line_2, 6, 1, 1, 3)
+        grid.addWidget(self.city, 1, 0)
+        grid.addWidget(self.city_line, 1, 1)
+        grid.addWidget(self.time, 2, 0)
+        grid.addWidget(self.time_line, 2, 1)
+        grid.addWidget(self.weath, 3, 0)
+        grid.addWidget(self.weat_line, 3, 1)
+        grid.addWidget(self.weath_1, 4, 0)
+        grid.addWidget(self.weat_line_1, 4, 1)
+        grid.addWidget(self.weath_2, 5, 0)
+        grid.addWidget(self.weat_line_2, 5, 1)
         
         self.setLayout(grid) 
 
