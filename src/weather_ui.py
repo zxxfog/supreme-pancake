@@ -14,11 +14,15 @@
 # change log: 创建程序
 # V0.0.2 添加用户输入城市名称选项
 # V0.0.3 天气API使用auto_ip选项
+# V0.0.5 添加最小化至系统托盘功能，添加后台时自动提示当前天气和明天天气有雨情况
 
 
 import sys
-from PyQt5.QtWidgets import QWidget, QLabel, QPushButton, QApplication, QLineEdit, QDesktopWidget, QGridLayout
-from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import (QWidget, QLabel, QPushButton, QApplication, QLineEdit, QDesktopWidget, 
+                            QGridLayout, QSystemTrayIcon, QMessageBox, QMenu, QAction, qApp)
+from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtCore import QTimer
+
 
 #UI类
 class Ui_Class(QWidget):
@@ -35,7 +39,45 @@ class Ui_Class(QWidget):
         self.weat_line = QLineEdit(self)
         self.weat_line_1 = QLineEdit(self)
         self.weat_line_2 = QLineEdit(self)
+        
+        #系统托盘实例
+        self.trayIcon = QSystemTrayIcon(self)
+        self.trayIcon.setIcon(QIcon('we.ico'))
+        self.trayIcon.activated.connect(self.ico_clicked)
+        
+        #托盘添加右键退出菜单
+        self.quit_action = QAction("退出",self,triggered=self.tray_quit)
+        self.traymenu = QMenu(self)
+        self.traymenu.addAction(self.quit_action)
+        self.trayIcon.setContextMenu(self.traymenu)
+        
+        self.tray_msg_flag = True
+        
         self.init_ui()
+    
+    #重写关闭事件
+    def closeEvent(self, e):
+        sel = QMessageBox.question(self, "后台提示", "是否需要最小化到系统托盘", QMessageBox.Yes|QMessageBox.No,QMessageBox.Yes)
+        if sel == QMessageBox.Yes:
+            e.ignore()    #忽略关闭事件
+            self.trayIcon.setVisible(True)
+            self.hide()
+        else:
+            self.trayIcon.setVisible(False)
+            e.accept()  #响应关闭事件
+            
+    def tray_quit(self):
+        self.trayIcon.setVisible(False)
+        qApp.quit()
+        
+    
+    #托盘上的图标被左键单击或者双击时的响应函数
+    def ico_clicked(self, reason):
+        if(reason==QSystemTrayIcon.Trigger or reason==QSystemTrayIcon.DoubleClick):
+            if self.isVisible():
+                self.hide()
+            else:
+                self.show()
         
     def init_ui(self):
         ui_font = QFont("宋体",12)
@@ -70,7 +112,6 @@ class Ui_Class(QWidget):
         grid.addWidget(self.weat_line_2, 5, 1)
         
         self.setLayout(grid) 
-
         self.show()
     
     #更新 当前天气 信息
@@ -112,5 +153,15 @@ class Ui_Class(QWidget):
             self.weat_line_1.setStyleSheet("color:"+str_color)
         else:
             self.weat_line_2.setStyleSheet("color:"+str_color)
-
+    
+    #托盘弹出气泡提示框，弹出频率由刷新天气频率确定
+    def tray_msg_show(self, str_info):
+        if len(str_info)>5:    #确保是有效数据
+            if self.tray_msg_flag == True:
+                self.trayIcon.showMessage("简易天气提示",str_info,QSystemTrayIcon.Information,2000)
+                #self.tray_msg_flag = False  #保留功能
+            else:
+                pass
+        else:
+            pass
 

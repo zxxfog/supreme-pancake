@@ -15,6 +15,7 @@
 # change log: 创建程序
 # V0.0.2 添加用户输入城市名称选项
 # V0.0.3 天气API使用auto_ip选项
+# V0.0.5 添加最小化至系统托盘功能，添加后台时自动提示当前天气和明天天气有雨情况
 
 
 from weather_ui import Ui_Class
@@ -24,7 +25,7 @@ from PyQt5.QtWidgets import QWidget, QLabel, QApplication
 from PyQt5.QtCore import *
 import requests
 
-TIMER_CYCLE = 120
+TIMER_CYCLE = 300# 天气信息刷新频率，单位：秒
 MY_WEATHER_KEY = "80aa4504b70a4de4bf27bf4c521dc362"    # 本软件使用的天气API  key
 URL_NOW_WEATHER = "https://free-api.heweather.net/s6/weather/now?location=auto_ip&key="+MY_WEATHER_KEY # 实时天气
 URL_FOR_WEATHER = "https://free-api.heweather.net/s6/weather/forecast?location=auto_ip&key="+MY_WEATHER_KEY  #预测天气
@@ -35,6 +36,7 @@ class Update_Thread(QThread):
     #自定义信号
     wt_up_now_sig = pyqtSignal(str, str, str, int)  #分别为城市名、天气、时间、是否坏天气
     wt_up_oth_sig = pyqtSignal(int, str, str, int)  #分别为明天(1)或后天(2)、天气、时间、是否坏天气
+    tray_message_sig = pyqtSignal(str)
     
     def __init__(self):
         super().__init__()
@@ -56,6 +58,7 @@ class Update_Thread(QThread):
     def run(self):
         while self.working == True:
             try:
+                self.try_msg_str=""
                 #获取天气数据，和风天气API使用天气类型now
                 rs_we = requests.get(self.url_now).json()
                 #分别获取 城市名称、当前时间、天气信息 信息
@@ -69,6 +72,7 @@ class Update_Thread(QThread):
                 if detag == 1:
                     #触发信号
                     self.wt_up_now_sig.emit(city_name, weat_info, time_info, 1)
+                    self.try_msg_str = "当前天气" + " :  " + wea_info_str
                 else:
                     self.wt_up_now_sig.emit(city_name, weat_info, time_info, 0)
                 
@@ -85,6 +89,11 @@ class Update_Thread(QThread):
                 detag = self.__is_bad_weather(wea_info_str)
                 if detag == 1:
                     self.wt_up_oth_sig.emit(1, weat_info, time_info, 1)
+                    #气泡提示只提示今天和明天两天的信息
+                    if len(self.try_msg_str)>5:    #这里的判断是为了气泡提示信息排版整齐
+                        self.try_msg_str = self.try_msg_str + "\n" + time_info + " :  " + wea_info_str
+                    else:
+                        self.try_msg_str = time_info + " :  " + wea_info_str
                 else:
                     self.wt_up_oth_sig.emit(1, weat_info, time_info, 0)
                     
@@ -102,7 +111,9 @@ class Update_Thread(QThread):
                 else:
                     self.wt_up_oth_sig.emit(2, weat_info, time_info, 0)
                 
-                time.sleep(TIMER_CYCLE)  # 天气信息刷新频率，120s
+                #触发托盘气泡信号
+                self.tray_message_sig.emit(self.try_msg_str)
+                time.sleep(TIMER_CYCLE)  #线程sleep
             except Exception as e:
                 pass
     
@@ -145,10 +156,11 @@ class Weather_Class(QObject):
     def update_wea_ui(self):
         self.up_thread.wt_up_now_sig.connect(self.up_now_wea)
         self.up_thread.wt_up_oth_sig.connect(self.up_otr_wea)
+        self.up_thread.tray_message_sig.connect(self.ui.tray_msg_show)
         self.up_thread.start()
 
 
-
+#程序主入口
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     wea = Weather_Class()
